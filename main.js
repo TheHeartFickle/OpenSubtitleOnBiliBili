@@ -7,6 +7,7 @@
 // @match       https://www.bilibili.com/video/*
 // @icon        https://www.bilibili.com/favicon.ico
 // @grant       none
+// @license     MIT License
 // @supportURL  https://github.com/TheHeartFickle/OpenSubtitleOnBiliBili/issues
 // @updateURL   https://github.com/TheHeartFickle/OpenSubtitleOnBiliBili/blob/main/main.js
 // ==/UserScript==
