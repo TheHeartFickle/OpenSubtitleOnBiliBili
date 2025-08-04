@@ -8,7 +8,7 @@
 // @icon        https://www.bilibili.com/favicon.ico
 // @grant       none
 // @supportURL  https://github.com/TheHeartFickle/OpenSubtitleOnBiliBili/issues
-// @updateURL   
+// @updateURL   https://github.com/TheHeartFickle/OpenSubtitleOnBiliBili/blob/main/main.js
 // ==/UserScript==
 
 (function () {
@@ -96,11 +96,14 @@
     window.addEventListener('load', openSubtitle);
     
     // 监听播放器状态变化
-    const observer = new MutationObserver(openSubtitle);
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        attributes: false,
-        characterData: false
-    });
+    const playerContainer = document.querySelector('.bpx-player-container, #bilibili-player');
+    if (playerContainer) {
+        const observer = new MutationObserver(optimizedObserverCallback);
+        observer.observe(playerContainer, {
+            childList: true,
+            subtree: true,
+            attributes: false,
+            characterData: false
+        });
+    }
 })();
