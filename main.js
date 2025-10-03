@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        自动打开b站字幕
 // @namespace   http://tampermonkey.net/
-// @version     1.0.3
+// @version     1.0.4
 // @description 自动开启B站视频字幕功能
 // @author      NuperAki
 // @match       https://www.bilibili.com/video/*
@@ -15,71 +15,68 @@
 (function () {
     let subtitleInterval = null;
     let currentHref = window.location.href;
-    
-    // 字幕开启状态的d值特征
-    const ACTIVE_D_PATTERN = /M40,-30/;
 
-    // 查找字幕按钮
-    function findSubtitle() {
-        const buttons = document.querySelectorAll('.bpx-common-svg-icon');
-        for (const btn of buttons) {
-            const parent = btn.parentElement?.parentElement;
-            if (parent?.getAttribute('aria-label') === '字幕') {
-                return btn;
-            }
+    // 检查并设置字幕
+    function trySetSubtitle() {
+        const bilingualSwitch = document.querySelector('.bpx-player-ctrl-subtitle-bilingual-bottom input[type="checkbox"]');
+        if (bilingualSwitch && bilingualSwitch.checked) {
+            bilingualSwitch.click();
         }
-        return null;
-    }
 
-    // 检查字幕按钮是否已激活
-    function isSubtitleActive(btn) {
-        const maskPath = btn.querySelector('mask path');
-        if (!maskPath) return false;
-        
-        // 检测d属性值
-        const dValue = maskPath.getAttribute('d') || '';
-        return ACTIVE_D_PATTERN.test(dValue);
-    }
+        const chineseButton = document.querySelector('.bpx-player-ctrl-subtitle-language-item[data-lan="ai-zh"]');
+        if (!chineseButton) {
+            return false; // 中文按钮不存在
+        }
 
-    function tryOpenSubtitle() {
-        const btn = findSubtitle();
-        if (!btn) return false;
-        
-        // 检查字幕状态
-        const isActive = isSubtitleActive(btn);
+        const isActive = chineseButton.classList.contains('bpx-state-active');
         if (!isActive) {
-            btn.click();
-            console.log("B站字幕已自动开启");
+            chineseButton.click();
             return true;
         }
         return false;
     }
 
     function openSubtitle() {
-        // 清除现有定时器
         if (subtitleInterval) {
             clearInterval(subtitleInterval);
             subtitleInterval = null;
         }
 
-        // 立即尝试打开字幕
-        if (tryOpenSubtitle()) return;
+        if (trySetSubtitle()) return;
 
-        // 设置定时器定期检查
         subtitleInterval = setInterval(() => {
-            if (tryOpenSubtitle()) {
+            if (trySetSubtitle()) {
                 clearInterval(subtitleInterval);
                 subtitleInterval = null;
             }
         }, 500);
 
-        // 10秒后自动停止检测
         setTimeout(() => {
             if (subtitleInterval) {
                 clearInterval(subtitleInterval);
                 subtitleInterval = null;
             }
         }, 10000);
+    }
+
+    // 优化观察者回调函数
+    function optimizedObserverCallback(mutationsList, observer) {
+        for (let mutation of mutationsList) {
+            if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                // 检查新增的节点中是否包含字幕相关元素
+                for (let node of mutation.addedNodes) {
+                    if (node.nodeType === 1) { // Element node
+                        if (node.querySelector && (
+                            node.querySelector('.bpx-player-ctrl-subtitle-language-item') ||
+                            node.classList && node.classList.contains('bpx-player-ctrl-subtitle-language-item')
+                        )) {
+                            openSubtitle();
+                            return;
+                        }
+                    }
+                }
+            }
+        }
     }
 
     // 初始检测
@@ -95,9 +92,9 @@
 
     // 页面完全加载后重新检测
     window.addEventListener('load', openSubtitle);
-    
+
     // 监听播放器状态变化
-    const playerContainer = document.querySelector('.bpx-player-container, #bilibili-player');
+    const playerContainer = document.querySelector('.bpx-player-container, #bilibiliPlayer, #bilibili-player');
     if (playerContainer) {
         const observer = new MutationObserver(optimizedObserverCallback);
         observer.observe(playerContainer, {
@@ -106,5 +103,10 @@
             attributes: false,
             characterData: false
         });
+    }
+
+    // 添加一个备用检测机制：监听DOMContentLoaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', openSubtitle);
     }
 })();
