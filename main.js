@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        自动打开b站字幕
 // @namespace   http://tampermonkey.net/
-// @version     1.0.4
+// @version     1.0.5
 // @description 自动开启B站视频字幕功能
 // @author      NuperAki
 // @match       https://www.bilibili.com/video/*
@@ -15,6 +15,8 @@
 (function () {
     let subtitleInterval = null;
     let currentHref = window.location.href;
+    let enabledOnce = false;   // 脚本是否成功开启过字幕
+    let userDisabled = false;  // 用户是否手动关闭了字幕
 
     // 检查并设置字幕
     function trySetSubtitle() {
@@ -29,14 +31,30 @@
         }
 
         const isActive = chineseButton.classList.contains('bpx-state-active');
+
+        // 脚本已成功开启过字幕，但现在字幕是关闭的 → 用户手动关闭了
+        if (enabledOnce && !isActive) {
+            userDisabled = true;
+            return true;
+        }
+
         if (!isActive) {
             chineseButton.click();
+            enabledOnce = true;
             return true;
+        }
+
+        // 字幕已经是开启状态，标记为已成功开启
+        if (!enabledOnce) {
+            enabledOnce = true;
         }
         return false;
     }
 
     function openSubtitle() {
+        // 用户手动关闭过字幕，不再自动开启
+        if (userDisabled) return;
+
         if (subtitleInterval) {
             clearInterval(subtitleInterval);
             subtitleInterval = null;
@@ -79,13 +97,12 @@
         }
     }
 
-    // 初始检测
-    openSubtitle();
-
     // 监听URL变化（SPA路由切换）
     setInterval(() => {
         if (window.location.href !== currentHref) {
             currentHref = window.location.href;
+            enabledOnce = false;
+            userDisabled = false;
             openSubtitle();
         }
     }, 500);
